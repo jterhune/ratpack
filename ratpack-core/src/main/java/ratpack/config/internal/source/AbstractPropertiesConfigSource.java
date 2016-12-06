@@ -42,7 +42,9 @@ public abstract class AbstractPropertiesConfigSource implements ConfigSource {
   public ObjectNode loadConfigData(ObjectMapper objectMapper, FileSystemBinding fileSystemBinding) throws Exception {
     ObjectNode rootNode = objectMapper.createObjectNode();
     Properties properties = loadProperties();
-    Stream<Pair<String, String>> pairs = properties.stringPropertyNames().stream().map(key -> Pair.of(key, properties.getProperty(key)));
+    Stream<Pair<String, String>> pairs = properties.entrySet().stream()
+      .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof CharSequence)
+      .map(entry -> Pair.of(entry.getKey().toString(), entry.getValue().toString()));
     if (prefix.isPresent()) {
       pairs = pairs
         .filter(p -> p.left.startsWith(prefix.get()))

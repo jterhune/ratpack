@@ -20,6 +20,11 @@ import ratpack.error.ServerErrorHandler
 import ratpack.error.internal.DefaultDevelopmentErrorHandler
 import ratpack.func.Action
 import ratpack.handling.Chain
+import ratpack.impose.ImpositionsSpec
+import ratpack.impose.ServerConfigImposition
+import ratpack.server.RatpackServer
+import ratpack.server.ServerConfig
+import ratpack.test.ServerBackedApplicationUnderTest
 import ratpack.test.internal.RatpackGroovyDslSpec
 
 class GroovySpec extends RatpackGroovyDslSpec {
@@ -80,7 +85,41 @@ class GroovySpec extends RatpackGroovyDslSpec {
     }
 
     then:
-    text == "No response sent for GET request to / (last handler: closure at line 60 of GroovySpec.groovy)"
+    text == "No response sent for GET request to / (last handler: closure at line 65 of GroovySpec.groovy)"
+  }
+
+  def "Supports ServerConfigImposition with GString"() {
+    setup:
+    def testServer = new ServerBackedApplicationUnderTest() {
+      @Override
+      protected RatpackServer createServer() throws Exception {
+        return RatpackServer.of { s ->
+          s.serverConfig(ServerConfig.of { serverConfigBuilder ->
+            serverConfigBuilder.props([color: 'green'])
+          })
+            .handlers({ Chain chain ->
+            chain.get('color', { ctx -> ctx.render(ctx.getServerConfig().get('/color', String)) })
+          })
+        }
+      }
+
+      @Override
+      protected void addImpositions(ImpositionsSpec impositions) {
+        String blue = 'blue'
+        impositions.add(ServerConfigImposition.of({ serverConfig ->
+          serverConfig.props([
+            color: "${blue}"
+          ])
+        }))
+      }
+    }
+
+    expect:
+    testServer.test {
+      httpClient ->
+        assert httpClient.get('color').body.text == 'blue'
+    }
+
   }
 
 }

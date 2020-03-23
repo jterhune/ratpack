@@ -44,6 +44,25 @@ class PromiseErrorSpec extends Specification {
     latch.await()
   }
 
+  def "on error returns promise"() {
+    when:
+    exec {
+      Promise.error(new IllegalArgumentException("!"))
+        .onError {
+        Promise.value("foo")
+      }
+      .then {
+        events << "then"
+      }
+    } {
+      events << it
+    }
+
+    then:
+    events.size() == 1
+    events[0] == "complete"
+  }
+
   def "on error can throw different error"() {
     when:
     exec {
@@ -62,6 +81,7 @@ class PromiseErrorSpec extends Specification {
     events.size() == 2
     events[0] instanceof NullPointerException
     (events[0] as Exception).suppressed[0] instanceof IllegalArgumentException
+    events[1] == "complete"
   }
 
   def "on error can throw same error"() {
@@ -80,6 +100,7 @@ class PromiseErrorSpec extends Specification {
     events.size() == 2
     events[0] instanceof IllegalArgumentException
     (events[0] as Exception).suppressed.length == 0
+    events[1] == "complete"
   }
 
   def "on error called when predicate passes"() {
